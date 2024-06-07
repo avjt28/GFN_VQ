@@ -21,8 +21,8 @@ from network import Encoder, Decoder, VectorQuantizerEMA, GFlowNet, LatentDictio
 
 ## PARAMETERS
 
-batch_size = 256
-epochs = 10
+batch_size = 512
+epochs = 1
 alternate_every = 50
 num_hiddens = 128
 num_residual_hiddens = 32
@@ -31,7 +31,7 @@ num_residual_layers = 2
 embedding_dim = 64
 num_embeddings = 512
 
-channels = 1024
+channels = 512
 
 commitment_cost = 0.25
 greedy_prob = 1
@@ -51,6 +51,9 @@ model_dir = 'models/'
 
 now = datetime.datetime.now()
 model_name = now.strftime("%Y%m%d_%H%M%S")
+
+
+
 
 
 def sample(gfn, img, p=1, rand_prob=0.05):
@@ -249,7 +252,7 @@ for e in range(epochs):
             
             dist1 = F.mse_loss(data_recon, data, reduction='none').sum((1,2,3))
             dist2 = F.mse_loss(quantized, z, reduction='none').sum((1,2,3))
-            reward = (-dist1-dist2) / steps
+            reward = torch.exp(-dist1-dist2) / steps
 
             fw_loss = (gfn.logZ.view(1,1) + logprobs.view(batch_size,1) / steps - reward.view(batch_size,1))**2
             fw_loss = fw_loss.mean()
@@ -372,14 +375,14 @@ plt.clf()
 encoder.eval()
 vq_vae.eval()
 decoder.eval()
+gfn.eval()
 
 data, _ = next(iter(training_loader))
 data = data[:16]
 data = data.to(device)
 z = encoder(data)
-
 state, logprobs = sample(gfn, z, p=-1, rand_prob=0)
-vq_loss, quantized, perplexity, encodings = vq_vae(inputs=z, enc=state, gfn=False)
+vq_loss, quantized, perplexity, encodings = vq_vae(inputs=z, enc=state)
 data_recon = decoder(quantized)
 
 def plot_images(tensor, model_path, name):
