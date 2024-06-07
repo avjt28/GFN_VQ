@@ -277,7 +277,7 @@ for e in range(epochs):
                 state, logprobs = sample(gfn, z, p=1, rand_prob=0)
 
             # Reconstruct image from sampled latent
-            vq_loss, quantized, perplexity, encodings = vq_vae(x=z, enc=state, gfn=False)
+            vq_loss, quantized, perplexity, encodings = vq_vae(inputs=z, enc=state, gfn=False)
 
             data_recon = decoder(quantized)
             # Decoder loss
@@ -379,7 +379,7 @@ data = data.to(device)
 z = encoder(data)
 
 state, logprobs = sample(gfn, z, p=-1, rand_prob=0)
-vq_loss, quantized, perplexity, encodings = vq_vae(x=z, enc=state, gfn=False)
+vq_loss, quantized, perplexity, encodings = vq_vae(inputs=z, enc=state, gfn=False)
 data_recon = decoder(quantized)
 
 def plot_images(tensor, model_path, name):
