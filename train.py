@@ -20,9 +20,8 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from network import Encoder, Decoder, VectorQuantizerEMA, GFlowNet, LatentDictionary
 
 ## PARAMETERS
-
-batch_size = 512
-epochs = 1
+batch_size = 256
+epochs = 100
 alternate_every = 50
 num_hiddens = 128
 num_residual_hiddens = 32
@@ -31,7 +30,7 @@ num_residual_layers = 2
 embedding_dim = 64
 num_embeddings = 512
 
-channels = 512
+channels = 1024
 
 commitment_cost = 0.25
 greedy_prob = 1
@@ -167,8 +166,6 @@ def sleep_step(encoder, gfn, decoder, latent_dict, batch_size=128):
 
 
 ## LOAD DATA
-
-
 training_data = datasets.CIFAR10(root="data", train=True, download=True,
                                   transform=transforms.Compose([
                                       transforms.ToTensor(),
@@ -186,7 +183,6 @@ validation_loader = DataLoader(validation_data, batch_size=32, shuffle=True, pin
 
 
 ## LOAD MODEL
-
 encoder = Encoder(3, num_hiddens, num_residual_layers, num_residual_hiddens, embedding_dim).to(device)
 
 gfn = GFlowNet(channels=channels, dictionary_size=num_embeddings, embedding_dim= embedding_dim).to(device)
@@ -194,7 +190,7 @@ gfn.train()
 vq_vae = VectorQuantizerEMA(num_embeddings, embedding_dim, commitment_cost, decay).to(device)
 
 latent_dict = LatentDictionary(embedding_dim=embedding_dim, dictionary_size=num_embeddings).to(device)
-latent_dict.train()
+# latent_dict.train()
 decoder = Decoder(embedding_dim, num_hiddens, num_residual_layers, num_residual_hiddens).to(device)
 
 
@@ -215,9 +211,9 @@ gfn_opt = torch.optim.Adam([{'params': gfn.img_enc.parameters()},
 optimizer = optim.Adam(list(decoder.parameters())+list(latent_dict.parameters()), lr=learning_rate)#, amsgrad=False)
 
 
-encoder.train()
-vq_vae.train()
-decoder.train()
+# encoder.train()
+# vq_vae.train()
+# decoder.train()
 steps = gfn.lh*gfn.lw
 train_res_vq_loss = []
 train_res_recon_error = []
@@ -288,7 +284,7 @@ for e in range(epochs):
             
             dist1 = F.mse_loss(data_recon, data, reduction='none').sum((1,2,3))
             dist2 = F.mse_loss(quantized, z, reduction='none').sum((1,2,3))
-            reward = (-dist1) / steps
+            reward = torch.exp(-dist1-dist2) / steps
 
             fw_loss = (gfn.logZ.view(1,1) + logprobs.view(batch_size,1) / steps - reward.view(batch_size,1))**2
             fw_loss = fw_loss.mean()
@@ -329,7 +325,7 @@ plt.legend()
 plt.grid(True)
 filename = 'training_vq_loss_plot.png'
 save_path = os.path.join(model_path, filename)
-plt.savefig(save_path, format='png', dpi=300)
+plt.savefig(save_path, format='png', dpi=100)
 plt.clf()
 
 epochs_plot = range(1, len(train_res_recon_error) + 1)
@@ -342,7 +338,7 @@ plt.legend()
 plt.grid(True)
 filename = 'training_Reconstruction_loss_plot.png'
 save_path = os.path.join(model_path, filename)
-plt.savefig(save_path, format='png', dpi=20)
+plt.savefig(save_path, format='png', dpi=100)
 plt.clf()
 
 # epochs_plot = range(1, len(train_res_perplexity) + 1)
@@ -355,7 +351,7 @@ plt.clf()
 # plt.grid(True)
 # filename = 'training_Perplexity_plot.png'
 # save_path = os.path.join(model_path, filename)
-# plt.savefig(save_path, format='png', dpi=300)
+# plt.savefig(save_path, format='png', dpi=100)
 # plt.clf()
 
 
@@ -401,7 +397,7 @@ def plot_images(tensor, model_path, name):
     plt.tight_layout()
     filename = name + '.png'
     save_path = os.path.join(model_path, filename)
-    plt.savefig(save_path, format='png', dpi=64)
+    plt.savefig(save_path, format='png', dpi=200)
     plt.clf()
 
 # Now call the function with your tensor
