@@ -215,7 +215,6 @@ class GFlowNet(nn.Module):
             nn.Linear(channels, channels),
             nn.ReLU(),
             nn.Linear(channels, dictionary_size*lh*lw),
-            nn.Softmax(),
         )
         
     def forward(self, img, state):
